@@ -51,7 +51,7 @@ object Draw extends SimpleSwingApplication {
     data = data_aux.map(_.map(_ => Color.BLACK))
     var x = 0
     var y = 0
-    for(i: Int <- 0 to dead) {
+    for(i: Int <- 0 until dead) {
         x = rand.nextInt(dim_x)
         y = rand.nextInt(dim_y)
 
