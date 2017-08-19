@@ -1,8 +1,11 @@
 # ant clustering algorithm
 @ IAR - UDESC/CCT
 
-Compile:
-> scalac Draw.scala
+``` bash
+# Compile:
+> scalac AntClustering.scala
 
-Run
-> scala Draw "x" "y" "alive" "dead"
+# Run
+> scala AntClustering "x" "y" "alive" "dead"
+
+```
