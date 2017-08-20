@@ -38,7 +38,7 @@ class Ant(val xi: Int, val yi: Int) {
 
 }
 
-class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwingApplication {
+class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends SimpleSwingApplication {
   /* dimensões e propriedades */
   var alive: Int = a
   var dead: Int = d
@@ -46,7 +46,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
   var dim_y: Int = y
   var data: Array[Array[Int]] = null
   var ants: Array[Ant] = null
-  var raio: Int = 2
+  var vision: Int = v
 
   /* Util */
   val rand = scala.util.Random
@@ -81,7 +81,6 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
   def top = new MainFrame {
     title = "clustering"
     definitions
-    
     contents = new DataPanel(data) {
         preferredSize = new Dimension(600, 600)
     }
@@ -91,6 +90,73 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
       this.repaint 
     }))
     timer.start
+  }
+
+  def visionSize(): Int = {
+    var odd = (((1 to dim_x).toStream).filter(_ % 2 != 0))(vision)
+    (odd * odd) - 1
+  }
+
+  def pminimax(idx: Int): Array[Array[Int]] = {
+    var auxx: Array[Array[Int]] = Array.ofDim[Int]( (((3 to 50).toStream).filter(_ % 2 != 0))(vision-1), (((3 to 50).toStream).filter(_ % 2 != 0))(vision-1) )
+    auxx.map(_.map(_ => 0))
+    val anchor = auxx.length/2
+
+    val old_x = ants(idx).x
+    val old_y = ants(idx).y 
+    var n = 0
+    var m = 0
+    for(i: Int <- old_x-vision to old_x+vision) {
+      for(j: Int <- old_y-vision to old_y+vision) {
+        if(i >= 0 && i < dim_x && j >= 0 && j < dim_y) {
+          if(data(i)(j) != 2)
+            auxx(n)(m) = data(i)(j)
+          m += 1
+        }
+      }
+      n += 1
+      m = 0
+    }
+
+    for(i: Int <- 0 until auxx.length) {
+      var x = 0
+      var y = 0
+
+      if(i < anchor) {
+        if(i + 1 != anchor)
+          x = i + 1
+        else 
+          x = i
+      } else if(i > anchor){
+        if(i-1 != anchor)
+          x = i - 1
+        else 
+          x = i
+      } else {
+        x = i
+      }
+
+      for(j: Int <- 0 until auxx.length) {
+        if(auxx(i)(j) == 1) {
+          if(j < anchor) {
+            if(j+1 != anchor)
+              y = j + 1
+            else
+              y = j
+          } else if(j > anchor){
+            if(j-1 != anchor)
+              y = j - 1
+            else
+              y = j
+          } else {
+            y = j
+          }
+          auxx(x)(y) += 1
+        }
+      }
+    }
+
+    auxx
   }
 
   def movement = {
@@ -105,8 +171,8 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
             var new_y = 0
             
             do {
-               new_x = rand.nextInt(3)-1
-               new_y = rand.nextInt(3)-1
+              new_x = rand.nextInt(3)-1
+              new_y = rand.nextInt(3)-1
             } while((new_x == 0 && new_y == 0) || 
                     (old_x + new_x) < 0 || (old_x + new_x) >= dim_x || 
                     (old_y + new_y) < 0 || (old_y + new_y) >= dim_y || 
@@ -132,10 +198,12 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
               } else {
                 var closer = count_neighbour(idx)
 
-                val prob_persquare: Double = 1.0/ 9.0
+                val prob_persquare: Double = 1.0/ ((visionSize/vision)- (1/vision))
                 val prob_random: Double = rand.nextDouble()
+                //val prob_random: Int = rand.nextInt(visionSize)
 
                 if( prob_random >= prob_persquare*closer ) {
+                //if( ((visionSize) -closer) >= prob_random) {
                   ants(idx).carrying = true
                   ants(idx).above = false
                 } else {
@@ -151,10 +219,12 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
 
                 val closer = count_neighbour(idx)
 
-                val prob_persquare: Double = 1.0/9.0
+                val prob_persquare: Double = 1.0/ ((visionSize/vision)- (1/vision))
                 val prob_random: Double = rand.nextDouble()
+                //val prob_random: Int = rand.nextInt(visionSize)
 
                 if( prob_random <= prob_persquare*closer ) {
+                //if( ((visionSize) -closer) <= prob_random) {
                   ants(idx).carrying = false
                   ants(idx).above = true
                 } else {
@@ -171,13 +241,13 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
               data(ants(idx).x)(ants(idx).y) = 2
           }
 
-          //Thread.sleep(5)
+          //Thread.sleep(10)
         }    
 
         def count_neighbour(idx: Int): Int = {
           var closer = 0
-          for(i: Int <- -raio to raio) {
-            for(j: Int <- -raio to raio) {
+          for(i: Int <- -vision to vision) {
+            for(j: Int <- -vision to vision) {
               if( (ants(idx).x + i) >= 0 && (ants(idx).x + i) < dim_x && 
                   (ants(idx).y + j) >= 0 && (ants(idx).y + j) < dim_y  
                 ) {
@@ -202,10 +272,15 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int) extends SimpleSwing
 
 object AntClustering {
   def main(args: Array[String]): Unit = {
-    var gg = new DrawUI(Integer.parseInt(args(0)), 
+    if(args.length < 5)
+      println("args: x y n_vivas n_mortas raio_visao")
+    else {
+      var gg = new DrawUI(Integer.parseInt(args(0)), 
                         Integer.parseInt(args(1)), 
                         Integer.parseInt(args(2)), 
-                        Integer.parseInt(args(3)))
-    gg.main(args)
+                        Integer.parseInt(args(3)),
+                        Integer.parseInt(args(4)))
+      gg.main(args)
+    }
   }
 }
