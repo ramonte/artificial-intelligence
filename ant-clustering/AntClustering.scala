@@ -93,21 +93,38 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
       this.repaint 
     }))
     timer.start
-    movement
+    start_movements
   }
 
-  def visionSize(): Int = {
+  def vision_size(): Int = {
     var odd = (((1 to dim_x).toStream).filter(_ % 2 != 0))(vision)
     (odd * odd) - 1
   }
 
-  def movement = {
+  def start_movements = {
+    val ants_perthread = this.alive / ncores
+    var actual = 0
+    var last = ants_perthread
+    for(i: Int <- 0 until ncores) {
+      if(last < this.alive) {
+        movement(actual, last)
+        actual = last + 1
+        if(i < (ncores-2)) 
+          last += (ants_perthread + 1)
+        else 
+          last = this.alive-1
+      }
+    }
+  }
+
+  def movement(init: Int, end: Int): Unit = {
     val thread = new Thread {
       override def run {
         Thread.sleep(2000)
+        println("início e fim: " + init + " " + end)
         var iterations = 0
         while(iterations < 5000000) {
-          for(idx: Int <- 0 until alive) {
+          for(idx: Int <- init to end) {
             val old_x = ants(idx).x
             val old_y = ants(idx).y 
             var new_x = 0
@@ -192,7 +209,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
 
   def pickup(idx: Int): Unit = {
     val closer = neighbourhood(idx)
-    val prob_persquare = closer.toFloat / visionSize
+    val prob_persquare = closer.toFloat / vision_size
     val prob_random: Double = rand.nextDouble()
 
     if( prob_random >= prob_persquare ) {
@@ -205,7 +222,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
 
   def drop(idx: Int): Unit = {
     val closer = neighbourhood(idx)
-    val prob_persquare: Double = closer.toFloat / visionSize
+    val prob_persquare: Double = closer.toFloat / vision_size
     val prob_random: Double = rand.nextDouble()
 
     if( prob_random <= prob_persquare ) {
