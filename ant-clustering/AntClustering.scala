@@ -47,6 +47,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
   var data: Array[Array[Int]] = null
   var ants: Array[Ant] = null
   var vision: Int = v
+  val ncores: Int = Runtime.getRuntime().availableProcessors()
 
   /* Util */
   val rand = scala.util.Random
@@ -60,18 +61,20 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     var x = 0
     var y = 0
     var idx_ants:Int = 0
-    for(i: Int <- 0 until this.dead) {
-        x = rand.nextInt(this.dim_x)
-        y = rand.nextInt(this.dim_y)
 
+    for(i: Int <- 0 until this.dead) {
+        do {
+          x = rand.nextInt(this.dim_x)
+          y = rand.nextInt(this.dim_y)
+        } while(this.data(x)(y) == 1)
         this.data(x)(y) = 1
     }
+
     for(i: Int <- 0 until this.alive) {
       do {
         x = rand.nextInt(this.dim_x)
         y = rand.nextInt(this.dim_y)
-
-      } while(this.data(x)(y) == 2);
+      } while(this.data(x)(y) == 2 || this.data(x)(y) == 1);
       this.data(x)(y) = 2
       this.ants(idx_ants) = new Ant(x, y)
       idx_ants += 1
@@ -84,12 +87,13 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     contents = new DataPanel(data) {
         preferredSize = new Dimension(600, 600)
     }
-    movement
-    val timer = new javax.swing.Timer(10, Swing.ActionListener(e =>
+    
+    val timer = new javax.swing.Timer(16, Swing.ActionListener(e =>
     {
       this.repaint 
     }))
     timer.start
+    movement
   }
 
   def visionSize(): Int = {
@@ -97,73 +101,12 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     (odd * odd) - 1
   }
 
-  def pminimax(idx: Int): Array[Array[Int]] = {
-    var auxx: Array[Array[Int]] = Array.ofDim[Int]( (((3 to 50).toStream).filter(_ % 2 != 0))(vision-1), (((3 to 50).toStream).filter(_ % 2 != 0))(vision-1) )
-    auxx.map(_.map(_ => 0))
-    val anchor = auxx.length/2
-
-    val old_x = ants(idx).x
-    val old_y = ants(idx).y 
-    var n = 0
-    var m = 0
-    for(i: Int <- old_x-vision to old_x+vision) {
-      for(j: Int <- old_y-vision to old_y+vision) {
-        if(i >= 0 && i < dim_x && j >= 0 && j < dim_y) {
-          if(data(i)(j) != 2)
-            auxx(n)(m) = data(i)(j)
-          m += 1
-        }
-      }
-      n += 1
-      m = 0
-    }
-
-    for(i: Int <- 0 until auxx.length) {
-      var x = 0
-      var y = 0
-
-      if(i < anchor) {
-        if(i + 1 != anchor)
-          x = i + 1
-        else 
-          x = i
-      } else if(i > anchor){
-        if(i-1 != anchor)
-          x = i - 1
-        else 
-          x = i
-      } else {
-        x = i
-      }
-
-      for(j: Int <- 0 until auxx.length) {
-        if(auxx(i)(j) == 1) {
-          if(j < anchor) {
-            if(j+1 != anchor)
-              y = j + 1
-            else
-              y = j
-          } else if(j > anchor){
-            if(j-1 != anchor)
-              y = j - 1
-            else
-              y = j
-          } else {
-            y = j
-          }
-          auxx(x)(y) += 1
-        }
-      }
-    }
-
-    auxx
-  }
-
   def movement = {
     val thread = new Thread {
       override def run {
         Thread.sleep(2000)
-        while(true) {
+        var iterations = 0
+        while(iterations < 5000000) {
           for(idx: Int <- 0 until alive) {
             val old_x = ants(idx).x
             val old_y = ants(idx).y 
@@ -177,7 +120,8 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
                     (old_x + new_x) < 0 || (old_x + new_x) >= dim_x || 
                     (old_y + new_y) < 0 || (old_y + new_y) >= dim_y || 
                     data(old_x + new_x)(old_y + new_y) == 2 ||
-                    data(old_x + new_x)(old_y + new_y) == 3
+                    data(old_x + new_x)(old_y + new_y) == 3 ||
+                    (old_x == new_x && old_y == new_y)
               );
 
             ants(idx).setCoordinate(old_x + new_x, old_y + new_y)
@@ -196,45 +140,23 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
               if(ants(idx).carrying) {
                 ants(idx).above = true
               } else {
-                var closer = count_neighbour(idx)
-
-                val prob_persquare: Double = 1.0/ ((visionSize/vision)- (1/vision))
-                val prob_random: Double = rand.nextDouble()
-                //val prob_random: Int = rand.nextInt(visionSize)
-
-                if( prob_random >= prob_persquare*closer ) {
-                //if( ((visionSize) -closer) >= prob_random) {
-                  ants(idx).carrying = true
-                  ants(idx).above = false
-                } else {
-                  ants(idx).above = true
-                }
+                pickup(idx)
               }
+
             }
 
             /* Se vai para um lugar vazio */
              else {
 
               if(ants(idx).carrying) {
-
-                val closer = count_neighbour(idx)
-
-                val prob_persquare: Double = 1.0/ ((visionSize/vision)- (1/vision))
-                val prob_random: Double = rand.nextDouble()
-                //val prob_random: Int = rand.nextInt(visionSize)
-
-                if( prob_random <= prob_persquare*closer ) {
-                //if( ((visionSize) -closer) <= prob_random) {
-                  ants(idx).carrying = false
-                  ants(idx).above = true
-                } else {
-                  ants(idx).above = false
-                }
+                drop(idx)
               } else {
                 ants(idx).above = false
               }
+
             }
 
+            /* Difere entre formigas carregando ou não */
             if(ants(idx).carrying) 
               data(ants(idx).x)(ants(idx).y) = 3
             else 
@@ -244,25 +166,54 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
           //Thread.sleep(10)
         }    
 
-        def count_neighbour(idx: Int): Int = {
-          var closer = 0
-          for(i: Int <- -vision to vision) {
-            for(j: Int <- -vision to vision) {
-              if( (ants(idx).x + i) >= 0 && (ants(idx).x + i) < dim_x && 
-                  (ants(idx).y + j) >= 0 && (ants(idx).y + j) < dim_y  
-                ) {
-                  if( data(ants(idx).x + i)(ants(idx).y + j) == 1 && i != 0 && j != 0 )
-                    closer += 1
-                  }
-            }
-          }
-          closer
-        }
+        iterations += 1
       }
     }
 
     /* back to function 'movement' */
     thread.start
+
+  }
+
+  def neighbourhood(idx: Int): Int = {
+    var closer = 0
+    for(i: Int <- -vision to vision) {
+      for(j: Int <- -vision to vision) {
+        if( (ants(idx).x + i) >= 0 && (ants(idx).x + i) < dim_x && 
+            (ants(idx).y + j) >= 0 && (ants(idx).y + j) < dim_y  
+          ) {
+            if( data(ants(idx).x + i)(ants(idx).y + j) == 1 )
+              closer += 1
+            }
+      }
+    }
+    closer
+  }
+
+  def pickup(idx: Int): Unit = {
+    val closer = neighbourhood(idx)
+    val prob_persquare = closer.toFloat / visionSize
+    val prob_random: Double = rand.nextDouble()
+
+    if( prob_random >= prob_persquare ) {
+      ants(idx).carrying = true
+      ants(idx).above = false
+    } else {
+      ants(idx).above = true
+    }
+  }
+
+  def drop(idx: Int): Unit = {
+    val closer = neighbourhood(idx)
+    val prob_persquare: Double = closer.toFloat / visionSize
+    val prob_random: Double = rand.nextDouble()
+
+    if( prob_random <= prob_persquare ) {
+      ants(idx).carrying = false
+      ants(idx).above = true
+    } else {
+      ants(idx).above = false
+    }
   }
 
   override def main(args: Array[String]): Unit = {
@@ -275,6 +226,7 @@ object AntClustering {
     if(args.length < 5)
       println("args: x y n_vivas n_mortas raio_visao")
     else {
+      println(Runtime.getRuntime().availableProcessors() + " threads")
       var gg = new DrawUI(Integer.parseInt(args(0)), 
                         Integer.parseInt(args(1)), 
                         Integer.parseInt(args(2)), 
