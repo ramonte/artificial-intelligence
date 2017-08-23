@@ -99,19 +99,19 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
 
   def start_movements = {
     for(i: Int <- 0 until alive) {
-      movement(i)
+      movements(i)
     }
   }
 
-  def movement(idx: Int): Unit = {
+  def movements(idx: Int): Unit = {
     val thread = new Thread {
       override def run {
         var iterations = 0
-        while(iterations < 5000) {
+        while(iterations < 5000000) {
           move(idx)
           iterations += 1
         }
-        while(ants(idx).carrying) {
+        while(ants(idx).carrying || data(ants(idx).x)(ants(idx).y) == 1) {
           move(idx)
         }
         data(ants(idx).x)(ants(idx).y) = 0
@@ -119,7 +119,6 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     }
     /* back to function 'movement' */
     thread.start
-
   }
 
   def move(idx: Int): Unit = {
