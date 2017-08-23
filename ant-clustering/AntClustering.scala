@@ -35,7 +35,6 @@ class Ant(val xi: Int, val yi: Int) {
     this.x = i
     this.y = j
   }
-
 }
 
 class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends SimpleSwingApplication {
@@ -108,69 +107,75 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     val thread = new Thread {
       override def run {
         var iterations = 0
-        while(iterations < 5000000) {
-          val old_x = ants(idx).x
-          val old_y = ants(idx).y
-          var new_x = 0
-          var new_y = 0
-
-          do {
-            new_x = rand.nextInt(3)-1
-            new_y = rand.nextInt(3)-1
-          } while((new_x == 0 && new_y == 0) ||
-                  (old_x + new_x) < 0 || (old_x + new_x) >= dim_x ||
-                  (old_y + new_y) < 0 || (old_y + new_y) >= dim_y ||
-                  data(old_x + new_x)(old_y + new_y) == 2 ||
-                  data(old_x + new_x)(old_y + new_y) == 3 ||
-                  (old_x == new_x && old_y == new_y)
-            );
-
-          ants(idx).setCoordinate(old_x + new_x, old_y + new_y)
-
-          /* Se estava acima de algum corpo (sem carregá-lo) */
-          val was_above = ants(idx).above
-          if(!was_above)
-            data(old_x)(old_y) = 0
-          else
-            data(old_x)(old_y) = 1
-
-          /* Se vai para cima de um novo corpo */
-          if(data(ants(idx).x)(ants(idx).y) == 1) {
-
-            /* Se está carregando */
-            if(ants(idx).carrying) {
-              ants(idx).above = true
-            } else {
-              pickup(idx)
-            }
-
-          }
-
-          /* Se vai para um lugar vazio */
-           else {
-
-            if(ants(idx).carrying) {
-              drop(idx)
-            } else {
-              ants(idx).above = false
-            }
-
-          }
-
-          /* Difere entre formigas carregando ou não */
-          if(ants(idx).carrying)
-            data(ants(idx).x)(ants(idx).y) = 3
-          else
-            data(ants(idx).x)(ants(idx).y) = 2
+        while(iterations < 5000) {
+          move(idx)
+          iterations += 1
         }
-
-        iterations += 1
+        while(ants(idx).carrying) {
+          move(idx)
+        }
+        data(ants(idx).x)(ants(idx).y) = 0
       }
     }
-
     /* back to function 'movement' */
     thread.start
 
+  }
+
+  def move(idx: Int): Unit = {
+    val old_x = ants(idx).x
+    val old_y = ants(idx).y
+    var new_x = 0
+    var new_y = 0
+
+    do {
+      new_x = rand.nextInt(3)-1
+      new_y = rand.nextInt(3)-1
+    } while((new_x == 0 && new_y == 0) ||
+            (old_x + new_x) < 0 || (old_x + new_x) >= dim_x ||
+            (old_y + new_y) < 0 || (old_y + new_y) >= dim_y ||
+            data(old_x + new_x)(old_y + new_y) == 2 ||
+            data(old_x + new_x)(old_y + new_y) == 3 ||
+            (old_x == new_x && old_y == new_y)
+      );
+
+    ants(idx).setCoordinate(old_x + new_x, old_y + new_y)
+
+    /* Se estava acima de algum corpo (sem carregá-lo) */
+    val was_above = ants(idx).above
+    if(!was_above)
+      data(old_x)(old_y) = 0
+    else
+      data(old_x)(old_y) = 1
+
+    /* Se vai para cima de um novo corpo */
+    if(data(ants(idx).x)(ants(idx).y) == 1) {
+
+      /* Se está carregando */
+      if(ants(idx).carrying) {
+        ants(idx).above = true
+      } else {
+        pickup(idx)
+      }
+
+    }
+
+    /* Se vai para um lugar vazio */
+     else {
+
+      if(ants(idx).carrying) {
+        drop(idx)
+      } else {
+        ants(idx).above = false
+      }
+
+    }
+
+    /* Difere entre formigas carregando ou não */
+    if(ants(idx).carrying)
+      data(ants(idx).x)(ants(idx).y) = 3
+    else
+      data(ants(idx).x)(ants(idx).y) = 2
   }
 
   def neighbourhood(idx: Int): Int = {
