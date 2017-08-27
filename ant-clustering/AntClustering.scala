@@ -115,6 +115,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
           move(idx)
         }
         data(ants(idx).x)(ants(idx).y) = 0
+        println("ant number " + idx + " says: Done!")
       }
     }
     /* back to function 'movement' */
@@ -126,19 +127,25 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     val old_y = ants(idx).y
     var new_x = 0
     var new_y = 0
+    var x = 0
+    var y = 0
 
     do {
+
       new_x = rand.nextInt(3)-1
       new_y = rand.nextInt(3)-1
-    } while((new_x == 0 && new_y == 0) ||
-            (old_x + new_x) < 0 || (old_x + new_x) >= dim_x ||
-            (old_y + new_y) < 0 || (old_y + new_y) >= dim_y ||
-            data(old_x + new_x)(old_y + new_y) == 2 ||
-            data(old_x + new_x)(old_y + new_y) == 3 ||
-            (old_x == new_x && old_y == new_y)
+      x = old_x + new_x
+      y = old_y + new_y
+      if(x == dim_x) x = 0
+      if(y == dim_y) y = 0
+      if(x == -1) x = (dim_x - 1)
+      if(y == -1) y = (dim_y - 1)
+
+    } while((new_x == 0 && new_y == 0) || (old_x == new_x && old_y == new_y) ||
+            data(x)(y) == 2 || data(x)(y) == 3
       );
 
-    ants(idx).setCoordinate(old_x + new_x, old_y + new_y)
+    ants(idx).setCoordinate(x, y)
 
     /* Se estava acima de algum corpo (sem carregá-lo) */
     val was_above = ants(idx).above
@@ -181,12 +188,17 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
     var closer = 0
     for(i: Int <- -vision to vision) {
       for(j: Int <- -vision to vision) {
-        if( (ants(idx).x + i) >= 0 && (ants(idx).x + i) < dim_x &&
-            (ants(idx).y + j) >= 0 && (ants(idx).y + j) < dim_y
-          ) {
-            if( data(ants(idx).x + i)(ants(idx).y + j) == 1 )
-              closer += 1
-            }
+        var x = ants(idx).x + i
+        var y = ants(idx).y + j
+
+        if(x >= dim_x) x = x - dim_x
+        if(y >= dim_y) y = y - dim_y
+
+        if(x < 0) x = x + dim_x
+        if(y < 0) y = y + dim_y
+
+        if( data(x)(y) == 1 )
+          closer += 1
       }
     }
     closer
