@@ -9,6 +9,6 @@
 > scalac AntClustering.scala
 
 # Run
-> scala AntClustering "x" "y" "alive" "dead" "vision" "filename" "separator"
+> scala AntClustering "x" "y" "alive" "vision" "filename" "separator" "alpha"
 
 ```

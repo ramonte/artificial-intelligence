@@ -109,6 +109,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int) extends
         var iterations = 0
         while(iterations < 5000000) {
           move(idx)
+          if(iterations % 100000 == 0) println(iterations)
           iterations += 1
         }
         while(ants(idx).carrying || data(ants(idx).x)(ants(idx).y) == 1) {

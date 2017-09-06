@@ -18,21 +18,21 @@ class DataPanel(var data: Array[Array[Info]]) extends Panel {
     } {
     	if(data(x)(y) != null) {
     		data(x)(y).group match {
-          case 1 =>  g.setColor(new Color(0, 0, 255))
-          case 2 =>  g.setColor(new Color(0, 255, 0))
-          case 3 =>  g.setColor(new Color(255, 255, 0))
-          case 4 =>  g.setColor(new Color(255, 0, 0))
-          case 5 =>  g.setColor(new Color(255, 0, 255))
-          case 6 =>  g.setColor(new Color(0, 255, 255))
-          case 7 =>  g.setColor(new Color(70, 0, 0))
-          case 8 =>  g.setColor(new Color(100, 100, 0))
-          case 9 =>  g.setColor(new Color(0, 50, 0))
-          case 10 => g.setColor(new Color(100, 0, 100))
-          case 11 => g.setColor(new Color(0, 0, 150))
-          case 12 => g.setColor(new Color(0, 100, 100))
-          case 13 => g.setColor(new Color(255, 100, 0))
-          case 14 => g.setColor(new Color(100, 255, 100))
-          case 15 => g.setColor(new Color(100, 50, 255))
+    			case 1 =>  g.setColor(new Color(255, 0, 0))
+                case 2 =>  g.setColor(new Color(0, 255, 0))
+                case 3 =>  g.setColor(new Color(0, 0, 255))
+                case 4 =>  g.setColor(new Color(255, 255, 0))
+                case 5 =>  g.setColor(new Color(255, 0, 255))
+                case 6 =>  g.setColor(new Color(0, 255, 255))
+                case 7 =>  g.setColor(new Color(100, 0, 0))
+                case 8 =>  g.setColor(new Color(100, 100, 0))
+                case 9 =>  g.setColor(new Color(0, 100, 0))
+                case 10 => g.setColor(new Color(100, 0, 100))
+                case 11 => g.setColor(new Color(0, 0, 100))
+                case 12 => g.setColor(new Color(0, 100, 100))
+                case 13 => g.setColor(new Color(255, 100, 0))
+                case 14 => g.setColor(new Color(100, 255, 100))
+                case 15 => g.setColor(new Color(100, 250, 255))
 	    		case _ => g.setColor(Color.BLACK)
     		}
     	} else {
@@ -46,6 +46,7 @@ class DataPanel(var data: Array[Array[Info]]) extends Panel {
 class Info(val att: Buffer[Double], val t: Int) {
   var attributes: Buffer[Double] = att
   var group: Int = t
+  var color: Color = Color.BLACK
 }
 
 class Ant(val xi: Int, val yi: Int) {
@@ -74,16 +75,15 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
   // T1 val alpha: Double = 33
   // T2 val alpha: Double = 0.9
   val alpha: Double = al
-  val k1: Double = 0.4
-  val k2: Double = 0.8
+  val k1: Double = 0.1
+  val k2: Double = 0.7
 
   /* Util */
   val rand = scala.util.Random
 
   def definitions(): Unit = {
     this.data = Array.ofDim[Info](this.dim_x, this.dim_y)
-    if(filename.equals("breast-cancer-wisconsin.data")) readFileBC
-    else readFile
+    readFile
 
     this.ants = Array.ofDim[Ant](this.alive)
     var x = 0
@@ -125,7 +125,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
   def movements(idx: Int): Unit = {
     val thread = new Thread {
       override def run {
-        for(i: Int <- 0 to 50000000) {
+        for(i: Int <- 0 to 5000000) {
           move(idx)
         }
         while(ants(idx).carrying != null) {
@@ -163,9 +163,9 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
       		if(ants(idx).carrying != null) drop(idx)
     	} else {
       		if(ants(idx).carrying == null) pickup(idx)
-    	}
+    	}	
     }
-
+    
 
   }
 
@@ -185,22 +185,21 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
         if(!(i == 0 && j == 0)){
           this.synchronized {
             if(data(x)(y) != null ) {
-              if(ants(idx).carrying != null) {
-                val d = distance(ants(idx).carrying.attributes, data(x)(y).attributes)
-                if(d <= 0) return 0
-                somatory += ( 1 -  (d / alpha ))
-              } else {
-                val d = distance(data(ants(idx).x)(ants(idx).y).attributes, data(x)(y).attributes)
-                if(d <= 0) return 0
-              	somatory += ( 1 - (d / alpha ))
+              if(ants(idx).carrying != null)
+                somatory += ( 1 - (distance(ants(idx).carrying.attributes, data(x)(y).attributes) / alpha ))
+              else {
+              	if(data(ants(idx).x)(ants(idx).y) == null) println("fumiga")
+              	if(data(x)(y) == null) println("data")
+              	somatory += ( 1 - (distance(data(ants(idx).x)(ants(idx).y).attributes, data(x)(y).attributes) / alpha ))
               }
+                
             }
           }
         }
       }
     }
     var value: Double = 0
-    value = (somatory / Math.pow(vision, 2))
+    value = (somatory / vision_size)
 
     if(value < 0)
       0.0
@@ -217,14 +216,9 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
   }
 
   def pickup(idx: Int): Unit = {
-    val d: Double = density(idx)
-    var pp: Double = 0
-
-    if(d <= 1.0) pp = 1.0
-    else pp = (1 / Math.pow(d, 2))
-
+    val pp = Math.pow((k1 / (k1 + density(idx))), 2)
     val prob_random: Double = rand.nextDouble()
-
+    
     if( prob_random < pp && data(ants(idx).x)(ants(idx).y) != null) {
     	ants(idx).carrying = data(ants(idx).x)(ants(idx).y)
     	data(ants(idx).x)(ants(idx).y) = null
@@ -233,12 +227,9 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
 
   def drop(idx: Int): Unit = {
     val d: Double = density(idx)
-    var pd:Double = 0
-
-    if(d >= 1.0) pd = 1.0
-    else pd = Math.pow(d, 4)
+    val pd = Math.pow((d / (k2 + d)), 2)
     val prob_random: Double = rand.nextDouble()
-
+    
     if( prob_random < pd && data(ants(idx).x)(ants(idx).y) == null) {
     	data(ants(idx).x)(ants(idx).y) = ants(idx).carrying
         ants(idx).carrying = null
@@ -274,6 +265,7 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
   }
 
   def readFile(): Unit = {
+    var ncolors: Int = 0
     var nattributes = 0
     for(line <- Source.fromFile(filename).getLines) {
       var att: Buffer[Double] = Buffer()
@@ -300,29 +292,6 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
     }
   }
 
-  def readFileBC(): Unit = {
-    for(line <- Source.fromFile(filename).getLines) {
-      var att: Buffer[Double] = Buffer()
-      var x = 0
-      var y = 0
-
-      if(!line.contains("?")) {
-        val splitted = line.split(separator)
-
-        for(i: Int <- 1 until splitted.length - 1) {
-          if(splitted(i).equals("?")) splitted(i) = "0"
-          att = att ++ Buffer((splitted(i)).toDouble)
-        }
-
-        do {
-          x = rand.nextInt(dim_x)
-          y = rand.nextInt(dim_y)
-        } while(data(x)(y) != null)
-        data(x)(y) = new Info(att, Integer.parseInt(splitted.last))
-      }
-    }
-  }
-
   override def main(args: Array[String]): Unit = {
     definitions
     top.open()
@@ -334,16 +303,16 @@ class DrawUI(val x: Int, val y: Int, val a: Int, val d: Int, val v: Int, val f: 
 object AntClustering {
   def main(args: Array[String]): Unit = {
     if(args.length < 5)
-      println("args: dim_x dim_y n_vivas raio_visao nome_arquivo separador_informações alpha")
+      println("args: dim_x dim_y n_vivas n_mortas raio_visao nome_arquivo separador_informações alpha")
     else {
       var gg = new DrawUI(Integer.parseInt(args(0)),
                         Integer.parseInt(args(1)),
                         Integer.parseInt(args(2)),
-                        0,
                         Integer.parseInt(args(3)),
-                        args(4),
+                        Integer.parseInt(args(4)),
                         args(5),
-                        args(6).toDouble)
+                        args(6),
+                        args(7).toDouble)
       gg.main(args)
     }
   }
