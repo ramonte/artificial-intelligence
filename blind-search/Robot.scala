@@ -38,7 +38,8 @@ class Node(val x: Int, val y: Int, val cost: Int) {
 }
 
 class DrawUI(val x_ini: Int, val y_ini: Int,
-             val x_end: Int, val y_end: Int) extends SimpleSwingApplication {
+             val x_end: Int, val y_end: Int,
+             val mode: Int) extends SimpleSwingApplication {
   val GRASS: Int = 0
   val MOUNTAIN: Int = 1
   val SWAMP: Int = 2
@@ -258,13 +259,84 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     return choice
   }
 
-  override def main(args: Array[String]): Unit = {
-    data = Array.ofDim[Int](DIMENSIONS, DIMENSIONS)
-    readFile
-    top.open
+  def dijkstra: Array[Array[(Int, (Int, Int))]] = {
+    var dj_data = data.map(_.clone)
+    var dj_costs: Array[Array[(Int, (Int, Int))]] = Array.ofDim[(Int, (Int, Int))](DIMENSIONS, DIMENSIONS)
+    var dj_list: Buffer[(Int, Int)] = Buffer((x_ini, y_ini))
+
+    for {
+      i <- 0 until DIMENSIONS
+      j <- 0 until DIMENSIONS
+    } {
+      dj_costs(i)(j) = (Int.MaxValue, (Int.MaxValue, Int.MaxValue) )
+    }
+
+    dj_costs(x_ini)(y_ini) = (0, (x_ini, y_ini))
+    data(x_ini)(y_ini) = VISITING
+    while(dj_list.length > 0) {
+      dj_list = dj_list.sortWith(sortbyCost)
+
+      var position = dj_list(0)
+      dj_list.remove(0)
+
+      data(position._1)(position._2) = VISITED
+
+      Thread.sleep(3)
+
+      var positionCost = 0
+
+      if(position._2 - 1 >= 0) {
+        expand(position._1, position._2 - 1, position._1, position._2)
+      }
+
+      if(position._1 + 1 < DIMENSIONS) {
+        expand(position._1 + 1, position._2, position._1, position._2)
+      }
+
+      if(position._2 + 1 < DIMENSIONS) {
+        expand(position._1, position._2 + 1, position._1, position._2)
+      }
+
+      if(position._1 - 1 >= 0) {
+        expand(position._1 - 1, position._2, position._1, position._2)
+      }
+
+    }
+
+
+    def sortbyCost(item1: (Int,Int), item2: (Int,Int)) = {
+      dj_costs(item2._1)(item2._2)._1 > dj_costs(item1._1)(item1._2)._1
+    }
+
+    def getCostDj(x: Int, y: Int): Int = {
+      var cost: Int = 0
+      dj_data(x)(y) match {
+        case GRASS => cost = 1
+        case MOUNTAIN => cost = 5
+        case SWAMP => cost = 10
+        case FIRE => cost = 15
+      }
+      cost
+    }
+
+    def expand(x: Int, y: Int, prev_x: Int, prev_y: Int) = {
+      var positionCost = getCostDj(x, y)
+      if(dj_costs(x)(y)._1 > dj_costs(prev_x)(prev_y)._1 + positionCost) {
+        dj_costs(x)(y) = (dj_costs(prev_x)(prev_y)._1 + positionCost, (prev_x, prev_y))
+        if(!dj_list.contains((x,y))) dj_list.append((x,y))
+        data(x)(y) = VISITING
+      }
+    }
+
+    return dj_costs
+
+  }
+
+  def dothe_bfs = {
     var ob: Node = bfs
     readFile
     var path: Buffer[(Int, Int)] = Buffer()
+
     var aux = ob
     var nodes: Int = 0
     while(aux != null) {
@@ -278,15 +350,49 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     }
     println("Nós: " + nodes)
   }
+
+  def dothe_dj = {
+    var costs: Array[Array[(Int, (Int, Int))]] = dijkstra
+    var path: Buffer[(Int, Int)] = Buffer()
+
+    readFile
+    var position: (Int, Int)  = (x_end, y_end)
+
+    while(position != (x_ini, y_ini)) {
+      path.append(position)
+      position = costs(position._1)(position._2)._2
+    }
+
+    for(i <- path.reverse) {
+      Thread.sleep(50)
+      data(i._1)(i._2) = VISITED
+    }
+    println("Custo final: " + costs(x_end)(y_end)._1)
+  }
+
+  override def main(args: Array[String]): Unit = {
+    data = Array.ofDim[Int](DIMENSIONS, DIMENSIONS)
+    readFile
+    top.open
+
+    mode match {
+      case 1 => dothe_bfs
+      case 2 => dothe_dj
+      case 3 => dothe_dj
+      case _ => println("Modo inválido.")
+    }
+  }
+
 }
 
 object Robot {
   def main(args: Array[String]): Unit = {
-    if(args.length == 4) {
+    if(args.length == 5) {
       var obj = new DrawUI(Integer.parseInt(args(0)),
                            Integer.parseInt(args(1)),
                            Integer.parseInt(args(2)),
-                           Integer.parseInt(args(3)))
+                           Integer.parseInt(args(3)),
+                           Integer.parseInt(args(4)))
       obj.main(null)
     } else {
       println("args: x_ini y_ini x_end y_end")
