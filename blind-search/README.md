@@ -1,4 +1,4 @@
-# robot 
+# robot
 @ IAR - UDESC/CCT
 
 ``` bash
@@ -9,6 +9,10 @@
 > scalac Robot.scala
 
 # Run
-> scala Robot "x" "y"
+> scala Robot "x" "y" "x_dest" "y_dest" "option"
 
+# option:
+# 1 -> bfs
+# 2 -> dijkstra
+# 3 -> dfs (not yet)
 ```
