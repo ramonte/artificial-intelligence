@@ -37,6 +37,8 @@ class Node(val x: Int, val y: Int, val cost: Int) {
   var father: Node = null
 }
 
+class DjNode(val cost: Int, val x: Int, val y: Int) {}
+
 class DrawUI(val x_ini: Int, val y_ini: Int,
              val x_end: Int, val y_end: Int,
              val mode: Int) extends SimpleSwingApplication {
@@ -78,57 +80,6 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       i = i + 1
     }
   }
-
-/*
-  def createTree(x: Int, y: Int, cost: Int): Node = {
-    data(x)(y) = VISITED
-    if(x != x_end && y != y_end)
-      expand(new Node(x, y, cost))
-    else
-      new Node(x, y, cost, null, null, null, null)
-  }
-
-  def expand(node: Node): Node = {
-    def expand_north: Node = {
-      if(node.y - 1 >= 0) {
-        if(data(node.x)(node.y-1) != VISITED) createTree(node.x, node.y - 1, node.cost + getCost(node.x, node.y - 1))
-        else null
-      }
-      else null
-    }
-
-    def expand_south: Node = {
-      if(node.y + 1 < DIMENSIONS) {
-        if(data(node.x)(node.y + 1) != VISITED) createTree(node.x, node.y + 1, node.cost + getCost(node.x, node.y + 1))
-        else null
-      }
-      else null
-    }
-
-    def expand_east: Node = {
-      if(node.x + 1 < DIMENSIONS) {
-        if(data(node.x + 1)(node.y) != VISITED) createTree(node.x + 1, node.y, node.cost + getCost(node.x + 1, node.y))
-        else null
-      }
-      else null
-    }
-
-    def expand_west: Node = {
-      if(node.x - 1 >= 0) {
-        if(data(node.x - 1)(node.y) != VISITED) createTree(node.x - 1, node.y, node.cost + getCost(node.x - 1, node.y))
-        else null
-      }
-      else null
-    }
-
-    node.n = expand_north
-    node.l = expand_east
-    node.s = expand_south
-    node.o = expand_west
-
-    node
-  }
-  */
 
   def createTree(x: Int, y: Int, cost: Int): Node = {
     def expand_north(node: Node): Node = {
@@ -259,20 +210,21 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     return choice
   }
 
-  def dijkstra: Array[Array[(Int, (Int, Int))]] = {
+  def dijkstra: Array[Array[DjNode]] = {
     var dj_data = data.map(_.clone)
-    var dj_costs: Array[Array[(Int, (Int, Int))]] = Array.ofDim[(Int, (Int, Int))](DIMENSIONS, DIMENSIONS)
+    var dj_costs: Array[Array[DjNode]] = Array.ofDim[DjNode](DIMENSIONS, DIMENSIONS)
     var dj_list: Buffer[(Int, Int)] = Buffer((x_ini, y_ini))
 
     for {
       i <- 0 until DIMENSIONS
       j <- 0 until DIMENSIONS
     } {
-      dj_costs(i)(j) = (Int.MaxValue, (Int.MaxValue, Int.MaxValue) )
+      dj_costs(i)(j) = new DjNode(Int.MaxValue, Int.MaxValue, Int.MaxValue)
     }
 
-    dj_costs(x_ini)(y_ini) = (0, (x_ini, y_ini))
+    dj_costs(x_ini)(y_ini) = new DjNode(0, x_ini, y_ini)
     data(x_ini)(y_ini) = VISITING
+
     while(dj_list.length > 0) {
       dj_list = dj_list.sortWith(sortbyCost)
 
@@ -305,7 +257,7 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
 
 
     def sortbyCost(item1: (Int,Int), item2: (Int,Int)) = {
-      dj_costs(item2._1)(item2._2)._1 > dj_costs(item1._1)(item1._2)._1
+      dj_costs(item2._1)(item2._2).cost > dj_costs(item1._1)(item1._2).cost
     }
 
     def getCostDj(x: Int, y: Int): Int = {
@@ -321,8 +273,8 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
 
     def expand(x: Int, y: Int, prev_x: Int, prev_y: Int) = {
       var positionCost = getCostDj(x, y)
-      if(dj_costs(x)(y)._1 > dj_costs(prev_x)(prev_y)._1 + positionCost) {
-        dj_costs(x)(y) = (dj_costs(prev_x)(prev_y)._1 + positionCost, (prev_x, prev_y))
+      if(dj_costs(x)(y).cost > dj_costs(prev_x)(prev_y).cost + positionCost) {
+        dj_costs(x)(y) = new DjNode(dj_costs(prev_x)(prev_y).cost + positionCost, prev_x, prev_y)
         if(!dj_list.contains((x,y))) dj_list.append((x,y))
         data(x)(y) = VISITING
       }
@@ -352,7 +304,7 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
   }
 
   def dothe_dj = {
-    var costs: Array[Array[(Int, (Int, Int))]] = dijkstra
+    var costs: Array[Array[DjNode]] = dijkstra
     var path: Buffer[(Int, Int)] = Buffer()
 
     readFile
@@ -360,14 +312,14 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
 
     while(position != (x_ini, y_ini)) {
       path.append(position)
-      position = costs(position._1)(position._2)._2
+      position = (costs(position._1)(position._2).x, costs(position._1)(position._2).y)
     }
 
     for(i <- path.reverse) {
       Thread.sleep(50)
       data(i._1)(i._2) = VISITED
     }
-    println("Custo final: " + costs(x_end)(y_end)._1)
+    println("Custo final: " + costs(x_end)(y_end).cost + "\nNós percorridos: " + path.length)
   }
 
   override def main(args: Array[String]): Unit = {
