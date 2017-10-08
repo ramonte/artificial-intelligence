@@ -1,6 +1,7 @@
 import java.awt.{Color, Graphics2D, Dimension}
 import swing._
 import scala.io.Source
+import scala.io.StdIn._
 import scala.collection.mutable.Buffer
 
 class DataPanel(var data: Array[Array[Int]]) extends Panel {
@@ -210,10 +211,31 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     return choice
   }
 
-  def dijkstra: Array[Array[DjNode]] = {
+  def uniform_cost(is_astar: Boolean): Array[Array[DjNode]] = {
     var dj_data = data.map(_.clone)
     var dj_costs: Array[Array[DjNode]] = Array.ofDim[DjNode](DIMENSIONS, DIMENSIONS)
     var dj_list: Buffer[(Int, Int)] = Buffer((x_ini, y_ini))
+
+    var astar_distances: Array[Array[Int]] = null
+    var prop1: Double = 0
+    var prop2: Double = 0
+
+    if(is_astar) {
+      println("Entre com as proporcoes para o custo e a distancia de manhattan, respectivamente")
+      prop1 = readInt()
+      prop2 = readInt()
+      println(prop1 + " e " + prop2)
+    }
+
+    if(is_astar) {
+      astar_distances = Array.ofDim[Int](DIMENSIONS, DIMENSIONS)
+      for {
+        i <- 0 until DIMENSIONS
+        j <- 0 until DIMENSIONS
+      } {
+        astar_distances(i)(j) = manhattan(i, j)
+      }
+    }
 
     for {
       i <- 0 until DIMENSIONS
@@ -226,7 +248,11 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     data(x_ini)(y_ini) = VISITING
 
     while(dj_list.length > 0) {
-      dj_list = dj_list.sortWith(sortbyCost)
+      if (is_astar) {
+        dj_list = dj_list.sortWith(sortbyCostAStar)
+      } else {
+        dj_list = dj_list.sortWith(sortbyCost)
+      }
 
       var position = dj_list(0)
       dj_list.remove(0)
@@ -258,6 +284,14 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
 
     def sortbyCost(item1: (Int,Int), item2: (Int,Int)) = {
       dj_costs(item2._1)(item2._2).cost > dj_costs(item1._1)(item1._2).cost
+    }
+
+    def sortbyCostAStar(item1: (Int, Int), item2: (Int, Int)) = {
+      (dj_costs(item2._1)(item2._2).cost * prop1 + astar_distances(item2._1)(item2._2)*prop2) > (dj_costs(item1._1)(item1._2).cost * prop1 + astar_distances(item1._1)(item1._2) * prop2)
+    }
+
+    def manhattan(x: Int, y: Int): Int = {
+      (Math.abs(x - x_end) + Math.abs(y - y_end))
     }
 
     def getCostDj(x: Int, y: Int): Int = {
@@ -303,8 +337,8 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     println("Nós: " + nodes)
   }
 
-  def dothe_dj = {
-    var costs: Array[Array[DjNode]] = dijkstra
+  def dothe_uc(is_astar: Boolean) = {
+    var costs: Array[Array[DjNode]] = uniform_cost(is_astar)
     var path: Buffer[(Int, Int)] = Buffer()
 
     readFile
@@ -329,8 +363,9 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
 
     mode match {
       case 1 => dothe_bfs
-      case 2 => dothe_dj
-      case 3 => dothe_dj
+      case 2 => dothe_uc(false)
+      case 3 => dothe_bfs
+      case 4 => dothe_uc(true)
       case _ => println("Modo inválido.")
     }
   }
@@ -347,7 +382,7 @@ object Robot {
                            Integer.parseInt(args(4)))
       obj.main(null)
     } else {
-      println("args: x_ini y_ini x_end y_end")
+      println("args: x_ini y_ini x_end y_end option")
     }
   }
 }

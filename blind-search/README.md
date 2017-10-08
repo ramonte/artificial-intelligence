@@ -15,4 +15,5 @@
 # 1 -> bfs
 # 2 -> dijkstra
 # 3 -> dfs (not yet)
+# 4 -> a*
 ```
