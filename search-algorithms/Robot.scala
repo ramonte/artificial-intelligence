@@ -65,9 +65,6 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       this.repaint
     }))
 
-    tree = createTree(x_ini, y_ini, getCost(x_ini, y_ini))
-    readFile
-
     timer.start
   }
 
@@ -80,6 +77,17 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       }
       i = i + 1
     }
+  }
+
+  def getCost(x: Int, y: Int): Int = {
+    var cost: Int = 0
+    data(x)(y) match {
+      case GRASS => cost = 1
+      case MOUNTAIN => cost = 5
+      case SWAMP => cost = 10
+      case FIRE => cost = 15
+    }
+    cost
   }
 
   def createTree(x: Int, y: Int, cost: Int): Node = {
@@ -158,32 +166,48 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     root
   }
 
-  def getCost(x: Int, y: Int): Int = {
-    var cost: Int = 0
-    data(x)(y) match {
-      case GRASS => cost = 1
-      case MOUNTAIN => cost = 5
-      case SWAMP => cost = 10
-      case FIRE => cost = 15
+  /* BFS search */
+
+  def dothe_bfs = {
+    tree = createTree(x_ini, y_ini, getCost(x_ini, y_ini))
+    readFile
+    var objective: Node = bfs
+    readFile
+
+    var costs: Array[Array[Int]] = Array.ofDim(DIMENSIONS, DIMENSIONS)
+    for {
+      i <- 0 until DIMENSIONS
+      j <- 0 until DIMENSIONS
+    } {
+      costs(i)(j) = getCost(i, j)
     }
-    cost
+    var path: Buffer[(Int, Int)] = Buffer()
+
+    var aux = objective
+    var nodes: Int = 0
+    var cost: Int = 0
+    while(aux != null) {
+      path.append( (aux.x, aux.y) )
+      aux = aux.father
+      nodes += 1
+    }
+    for(i <- path.reverse) {
+      Thread.sleep(50)
+      data(i._1)(i._2) = VISITED
+      cost = cost + costs(i._1)(i._2)
+    }
+    println("Custo final: " + cost + "\nNós percorridos: " + nodes)
   }
 
   def bfs: Node = {
     var open: Buffer[Node] = Buffer(tree)
-    var choice: Node = null
-    var min: Int = 999999
     while(open.length > 0) {
       var search = open(0)
       open.remove(0)
 
       Thread.sleep(5)
       if(search.x == x_end && search.y == y_end) {
-        if(search.cost < min) {
-          println(search.cost)
-          choice = search
-          min = search.cost
-        }
+        return search
       } else {
         if(search.n != null) {
           open.append(search.n)
@@ -208,7 +232,28 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       }
       data(search.x)(search.y) = VISITED
     }
-    return choice
+    return null
+  }
+
+  /* Uniform cost search */
+
+  def dothe_uc(is_astar: Boolean) = {
+    var costs: Array[Array[DjNode]] = uniform_cost(is_astar)
+    var path: Buffer[(Int, Int)] = Buffer()
+
+    readFile
+    var position: (Int, Int)  = (x_end, y_end)
+
+    while(position != (x_ini, y_ini)) {
+      path.append(position)
+      position = (costs(position._1)(position._2).x, costs(position._1)(position._2).y)
+    }
+
+    for(i <- path.reverse) {
+      Thread.sleep(50)
+      data(i._1)(i._2) = VISITED
+    }
+    println("Custo final: " + costs(x_end)(y_end).cost + "\nNós percorridos: " + path.length)
   }
 
   def uniform_cost(is_astar: Boolean): Array[Array[DjNode]] = {
@@ -225,9 +270,7 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       prop1 = readInt()
       prop2 = readInt()
       println(prop1 + " e " + prop2)
-    }
 
-    if(is_astar) {
       astar_distances = Array.ofDim[Int](DIMENSIONS, DIMENSIONS)
       for {
         i <- 0 until DIMENSIONS
@@ -315,16 +358,29 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     }
 
     return dj_costs
-
   }
 
-  def dothe_bfs = {
-    var ob: Node = bfs
+  /* Iteractive deepening search */
+
+  def dothe_ids = {
+    tree = createTree(x_ini, y_ini, getCost(x_ini, y_ini))
     readFile
+
+    var objective: Node = ids
+    readFile
+
+    var costs: Array[Array[Int]] = Array.ofDim(DIMENSIONS, DIMENSIONS)
+    for {
+      i <- 0 until DIMENSIONS
+      j <- 0 until DIMENSIONS
+    } {
+      costs(i)(j) = getCost(i, j)
+    }
     var path: Buffer[(Int, Int)] = Buffer()
 
-    var aux = ob
+    var aux = objective
     var nodes: Int = 0
+    var cost: Int = 0
     while(aux != null) {
       path.append( (aux.x, aux.y) )
       aux = aux.father
@@ -333,27 +389,70 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     for(i <- path.reverse) {
       Thread.sleep(50)
       data(i._1)(i._2) = VISITED
+      cost = cost + costs(i._1)(i._2)
     }
-    println("Nós: " + nodes)
+    println("Custo final: " + cost + "\nNós percorridos: " + nodes)
   }
 
-  def dothe_uc(is_astar: Boolean) = {
-    var costs: Array[Array[DjNode]] = uniform_cost(is_astar)
-    var path: Buffer[(Int, Int)] = Buffer()
+  def ids: Node = {
+    var original_data: Array[Array[Int]] = data.map(_.clone)
+    var level: Int = 1
+    var objective: Node = null
 
-    readFile
-    var position: (Int, Int)  = (x_end, y_end)
+    while(objective == null) {
+      objective = deepening_search(tree, 1, level)
+      level = level + 1
+      readFile
+    }
+    return objective
+  }
 
-    while(position != (x_ini, y_ini)) {
-      path.append(position)
-      position = (costs(position._1)(position._2).x, costs(position._1)(position._2).y)
+  def deepening_search(node: Node, level: Int, maxlevel: Int): Node = {
+    if(node.x == x_end && node.y == y_end) {
+      return node
     }
 
-    for(i <- path.reverse) {
-      Thread.sleep(50)
-      data(i._1)(i._2) = VISITED
+    if(level == maxlevel) {
+      return null
     }
-    println("Custo final: " + costs(x_end)(y_end).cost + "\nNós percorridos: " + path.length)
+
+    Thread.sleep(2)
+
+    var objective: Node = null
+
+    if(node.n != null) {
+      data(node.n.x)(node.n.y) = VISITING
+      var result: Node = deepening_search(node.n, level+1, maxlevel)
+      if(result != null) {
+        objective = result
+      }
+    }
+    if(node.e != null) {
+      data(node.e.x)(node.e.y) = VISITING
+      var result: Node = deepening_search(node.e, level+1, maxlevel)
+      if(result != null) {
+        objective = result
+      }
+    }
+    if(node.s != null) {
+      data(node.s.x)(node.s.y) = VISITING
+      var result: Node = deepening_search(node.s, level+1, maxlevel)
+      if(result != null) {
+        objective = result
+      }
+    }
+    if(node.w != null) {
+      data(node.w.x)(node.w.y) = VISITING
+      var result: Node = deepening_search(node.w, level+1, maxlevel)
+      if(result != null) {
+        objective = result
+      }
+    }
+
+    data(node.x)(node.y) = VISITED
+
+
+    return objective
   }
 
   override def main(args: Array[String]): Unit = {
@@ -364,7 +463,7 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     mode match {
       case 1 => dothe_bfs
       case 2 => dothe_uc(false)
-      case 3 => dothe_bfs
+      case 3 => dothe_ids
       case 4 => dothe_uc(true)
       case _ => println("Modo inválido.")
     }

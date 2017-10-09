@@ -14,6 +14,6 @@
 # option:
 # 1 -> bfs
 # 2 -> dijkstra
-# 3 -> dfs (not yet)
+# 3 -> iteractive deepening
 # 4 -> a*
 ```
