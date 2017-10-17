@@ -171,7 +171,9 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
   def dothe_bfs = {
     tree = createTree(x_ini, y_ini, getCost(x_ini, y_ini))
     readFile
+    val t0 = System.nanoTime()
     var objective: Node = bfs
+    val tf = System.nanoTime()
     readFile
 
     var costs: Array[Array[Int]] = Array.ofDim(DIMENSIONS, DIMENSIONS)
@@ -192,11 +194,12 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       nodes += 1
     }
     for(i <- path.reverse) {
-      Thread.sleep(50)
+
       data(i._1)(i._2) = VISITED
       cost = cost + costs(i._1)(i._2)
     }
-    println("Custo final: " + cost + "\nNós percorridos: " + nodes)
+
+    println("Custo final: " + cost + "\nNós percorridos: " + nodes + "\nTempo de execução (ms): " + (tf-t0)/1e9d)
   }
 
   def bfs: Node = {
@@ -205,7 +208,7 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       var search = open(0)
       open.remove(0)
 
-      Thread.sleep(5)
+
       if(search.x == x_end && search.y == y_end) {
         return search
       } else {
@@ -238,7 +241,9 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
   /* Uniform cost search */
 
   def dothe_uc(is_astar: Boolean) = {
+    val t0 = System.nanoTime()
     var costs: Array[Array[DjNode]] = uniform_cost(is_astar)
+    val tf = System.nanoTime()
     var path: Buffer[(Int, Int)] = Buffer()
 
     readFile
@@ -250,10 +255,10 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     }
 
     for(i <- path.reverse) {
-      Thread.sleep(50)
+
       data(i._1)(i._2) = VISITED
     }
-    println("Custo final: " + costs(x_end)(y_end).cost + "\nNós percorridos: " + path.length)
+    println("Custo final: " + costs(x_end)(y_end).cost + "\nNós percorridos: " + path.length + "\nTempo de execução (ms): " + (tf-t0)/1e9d)
   }
 
   def uniform_cost(is_astar: Boolean): Array[Array[DjNode]] = {
@@ -262,14 +267,14 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     var dj_list: Buffer[(Int, Int)] = Buffer((x_ini, y_ini))
 
     var astar_distances: Array[Array[Int]] = null
-    var prop1: Double = 0
-    var prop2: Double = 0
+    var prop1: Double = 1
+    var prop2: Double = 1
 
     if(is_astar) {
-      println("Entre com as proporcoes para o custo e a distancia de manhattan, respectivamente")
-      prop1 = readInt()
-      prop2 = readInt()
-      println(prop1 + " e " + prop2)
+      // println("Entre com as proporcoes para o custo e a distancia de manhattan, respectivamente")
+      // prop1 = readInt()
+      // prop2 = readInt()
+      // println(prop1 + " e " + prop2)
 
       astar_distances = Array.ofDim[Int](DIMENSIONS, DIMENSIONS)
       for {
@@ -302,7 +307,11 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
 
       data(position._1)(position._2) = VISITED
 
-      Thread.sleep(3)
+      if(position._1 == x_end && position._2 == y_end) {
+        return dj_costs
+      }
+
+
 
       var positionCost = 0
 
@@ -365,8 +374,9 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
   def dothe_ids = {
     tree = createTree(x_ini, y_ini, getCost(x_ini, y_ini))
     readFile
-
+    val t0 = System.nanoTime()
     var objective: Node = ids
+    val tf = System.nanoTime()
     readFile
 
     var costs: Array[Array[Int]] = Array.ofDim(DIMENSIONS, DIMENSIONS)
@@ -387,11 +397,11 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       nodes += 1
     }
     for(i <- path.reverse) {
-      Thread.sleep(50)
+
       data(i._1)(i._2) = VISITED
       cost = cost + costs(i._1)(i._2)
     }
-    println("Custo final: " + cost + "\nNós percorridos: " + nodes)
+    println("Custo final: " + cost + "\nNós percorridos: " + nodes + "\nTempo de execução (ms): " + (tf-t0)/1e9d)
   }
 
   def ids: Node = {
@@ -416,7 +426,7 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
       return null
     }
 
-    Thread.sleep(2)
+    Thread.sleep(5)
 
     var objective: Node = null
 
@@ -459,7 +469,6 @@ class DrawUI(val x_ini: Int, val y_ini: Int,
     data = Array.ofDim[Int](DIMENSIONS, DIMENSIONS)
     readFile
     top.open
-
     mode match {
       case 1 => dothe_bfs
       case 2 => dothe_uc(false)
