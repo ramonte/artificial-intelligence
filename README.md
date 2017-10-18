@@ -1,4 +1,3 @@
-# artificial-intelligence
 @ IAR - UDESC/CCT
 
 # ant-clustering
