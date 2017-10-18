@@ -1,5 +1,6 @@
-import scala.collection.mutable.Buffer
+import tictactoe.Node
 import scala.io.StdIn
+import scala.util.Sorting.quickSort
 
 object Tictactoe {
   val X: Int = 101
@@ -21,6 +22,10 @@ object Tictactoe {
       println(" ")
     })
     println("")
+  }
+
+  def turnplayer(player: Int): Int = {
+    if(player == X) return O else return X
   }
 
   def getWinConditions(board: Array[Array[Int]]): Array[Array[Int]] = {
@@ -48,15 +53,10 @@ object Tictactoe {
     } while(!movementIsValid(x, y, board))
 
     board(x-1)(y-1) = player
-    printBoard(board)
   }
 
   def movementIsValid(x: Int, y: Int, board: Array[Array[Int]]): Boolean = {
     if(x > 3 || y > 3 || x < 1 || y < 1 || board(x-1)(y-1) != EMPTY) return false else return true
-  }
-
-  def setScore(board: Array[Array[Int]]): Int = {
-    if(verifyWin(board) == X) return -1 else if(verifyWin(board) == O) return 1 else return 0
   }
 
   def generateBoards(board: Array[Array[Int]], player: Int): Array[Array[Array[Int]]] = {
@@ -84,16 +84,121 @@ object Tictactoe {
     return allBoards
   }
 
+  def generateTree(board: Array[Array[Int]], player: Int): Node = {
+    if(verifyWin(board) == EMPTY) {
+      return new Node(board, Int.MaxValue, _generateTree(board, turnplayer(player)))
+    } else {
+      return new Node(board, setScore(board), null)
+    }
+  }
+
+  def _generateTree(board: Array[Array[Int]], player: Int): Array[Node] = {
+    return generateBoards(board, player).map((b) => generateTree(b, player))
+  }
+
+  def setScore(board: Array[Array[Int]]): Int = {
+    if(verifyWin(board) == X) return -1 else if(verifyWin(board) == O) return 1 else return 0
+  }
+
+  def scorify(root: Node, player: Int): Array[Node] = {
+      root.childs.foreach((n) => {
+        var value = _scorify(n, X)
+        if(n.weight == Int.MaxValue) n.weight = value
+        else {
+          if(player == X) {
+            if(n.weight < value) n.weight = value
+          } else {
+            if(n.weight > value) n.weight = value
+          }
+        }
+      })
+
+      def _scorify(node: Node, player: Int): Int = {
+        if(node.childs != null) {
+          node.childs.foreach((n) => {
+            var value = _scorify(n, turnplayer(player))
+            if(node.weight == Int.MaxValue) node.weight = value
+            else {
+              if(player == X) {
+                if(node.weight < value) node.weight = value
+              } else {
+                if(node.weight > value) node.weight = value
+              }
+            }
+          })
+        }
+        return node.weight
+      }
+
+      return root.childs
+  }
+
+  def willWin(node: Node): Boolean = {
+    if(verifyWin(node.board) == O) return true else return false
+  }
+
+  def willLose(board: Array[Array[Int]]): Array[Array[Int]] = {
+    var boards = generateBoards(board, X)
+    boards.foreach((b) => {
+      if(verifyWin(b) == X) {
+        for {
+          i <- 0 until 3
+          j <- 0 until 3
+        } {
+          if(b(i)(j) != board(i)(j)) {
+            b(i)(j) = O
+          }
+        }
+        return b
+      }
+    })
+    return null
+  }
+
+  def getBestBoard(boards: Array[Node]): Array[Array[Int]] = {
+    var weight = -1
+    var board = Array[Array[Int]]()
+    boards.foreach((b) => {
+      if(b.weight > weight) {
+        weight = b.weight
+        board = b.board
+      }
+    })
+    return board
+  }
+
+  def minimax(board: Array[Array[Int]]): Array[Array[Int]] = {
+    var root: Node = generateTree(board, X)
+    var nextLevel: Array[Node] = scorify(root, X)
+    nextLevel.foreach((b) => {
+      if(willWin(b)) return b.board
+    })
+    var loseScenario = willLose(board)
+    if(loseScenario != null) return loseScenario
+
+    return getBestBoard(nextLevel)
+  }
+
   def main(args: Array[String]) = {
     var board: Array[Array[Int]] = Array(Array(EMPTY, EMPTY, EMPTY), Array(EMPTY, EMPTY, EMPTY), Array(EMPTY, EMPTY, EMPTY))
     var player = X
-    generateBoards(board, player)
-    printBoard(board)
     var win = EMPTY
+    printBoard(board)
     while(win == EMPTY) {
-      movement(player, board)
+      if(player == X) {
+        movement(player, board)
+      } else {
+        board = minimax(board)
+      }
       win = verifyWin(board)
-      if(player == X) player = O else player = X
+      player = turnplayer(player)
+      printBoard(board)
     }
+    win match {
+      case X => println("Jogador venceu!")
+      case O => println("Godofredo venceu!")
+      case _ => println("Deu velha!")
+    }
+
   }
 }

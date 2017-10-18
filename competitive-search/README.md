@@ -8,7 +8,7 @@ TicTacToe using Minimax algorithm.
 # Using Scala 2.12.2
 
 # Compile:
-> scalac Tictactoe.scala
+> scalac *.scala 
 
 # Run
 > scala Tictactoe
