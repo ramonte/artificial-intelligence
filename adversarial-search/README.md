@@ -1,5 +1,5 @@
 # TicTacToe
-TicTacToe using Minimax algorithm.
+TicTacToe using Minimax/alpha-beta pruning algorithm.
 
 @ IAR - UDESC/CCT
 
@@ -8,7 +8,7 @@ TicTacToe using Minimax algorithm.
 # Using Scala 2.12.2
 
 # Compile:
-> scalac *.scala 
+> scalac *.scala
 
 # Run
 > scala Tictactoe
