@@ -28,10 +28,13 @@ object Tictactoe {
     println("")
   }
 
-
   def turnplayer(player: Int): Int = {
     if(player == X) return O else return X
   }
+
+  def min(x: Int, y: Int): Int = { if(x < y) return x else return y }
+
+  def max(x: Int, y: Int): Int = { if(x > y) return x else return y }
 
   def getWinConditions(board: Array[Array[Int]]): Array[Array[Int]] = {
     val transposed: Array[Array[Int]] = board.transpose
@@ -90,7 +93,7 @@ object Tictactoe {
   }
 
   def setScore(board: Array[Array[Int]]): Int = {
-    if(verifyWin(board) == X) return -1 else if(verifyWin(board) == O) return 1 else return 0
+    if(verifyWin(board) == X) return 1 else if(verifyWin(board) == O) return -1 else return 0
   }
 
   def generateTree(board: Array[Array[Int]], player: Int): Node = {
@@ -106,32 +109,36 @@ object Tictactoe {
   }
 
   def scorify(root: Node, player: Int): Array[Node] = {
-      root.childs.foreach((n) => {
-        var value = _scorify(n, turnplayer(player))
-        if(n.weight == Int.MaxValue) n.weight = value
-        else {
-            if(n.weight < value) n.weight = value
-        }
-      })
-
-      def _scorify(node: Node, player: Int): Int = {
-        if(node.childs != null) {
-          node.childs.foreach((n) => {
-            var value = _scorify(n, turnplayer(player))
-            if(n.weight == Int.MaxValue) n.weight = value
-            else {
-              if(player == X) {
-                if(n.weight < value) n.weight = value
-              } else {
-                if(n.weight > value) n.weight = value
-              }
-            }
-          })
-        }
-        return node.weight
+    root.childs.foreach((item) => {
+      if(item.childs != null) {
+        item.childs.foreach((child) => {
+          var value = _scorify(child, turnplayer(player))
+          if(item.weight == Int.MaxValue) item.weight = value
+          else {
+              item.weight = max(item.weight, value)
+          }
+        })
       }
+    })
 
-      return root.childs
+    def _scorify(node: Node, player: Int): Int = {
+      if(node.childs != null) {
+        node.childs.foreach((child) => {
+          var value = _scorify(child, turnplayer(player))
+          if(node.weight == Int.MaxValue) node.weight = value
+          else {
+            if(player == X) {
+              node.weight = max(node.weight, value)
+            } else {
+              node.weight = min(node.weight, value)
+            }
+          }
+        })
+      }
+      return node.weight
+    }
+
+    return root.childs
   }
 
   def willWin(node: Node): Boolean = {
@@ -157,10 +164,10 @@ object Tictactoe {
   }
 
   def getBestBoard(boards: Array[Node]): Array[Array[Int]] = {
-    var weight = Int.MinValue
+    var weight = 2
     var board = Array[Array[Int]]()
     boards.foreach((b) => {
-      if(b.weight > weight) {
+      if(b.weight < weight) {
         weight = b.weight
         board = b.board
       }
@@ -172,6 +179,11 @@ object Tictactoe {
     var root: Node = generateTree(board, X)
     var nextLevel: Array[Node] = scorify(root, X)
 
+    // nextLevel.foreach((b) => {
+    //   printBoard(b.board)
+    //   println(b.weight)
+    // })
+
     nextLevel.foreach((b) => {
       if(willWin(b)) return b.board
     })
@@ -182,7 +194,7 @@ object Tictactoe {
     return getBestBoard(nextLevel)
   }
 
-  def main(args: Array[String]) = {
+  def play_minimax = {
     var board: Array[Array[Int]] = Array(Array(EMPTY, EMPTY, EMPTY), Array(EMPTY, EMPTY, EMPTY), Array(EMPTY, EMPTY, EMPTY))
     var player = X
     var win = EMPTY
@@ -202,6 +214,17 @@ object Tictactoe {
       case O => println("Godofredo venceu!")
       case _ => println("Deu velha!")
     }
+  }
 
+  def play_alphabeta = {
+    // TODO
+  }
+
+  def main(args: Array[String]) = {
+    Integer.parseInt(args(0)) match {
+      case 1 => play_minimax
+      case 2 => play_alphabeta
+      case _ => println("Wrong!")
+    }
   }
 }

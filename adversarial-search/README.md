@@ -11,6 +11,10 @@ TicTacToe using Minimax/alpha-beta pruning algorithm.
 > scalac *.scala
 
 # Run
-> scala Tictactoe
+> scala Tictactoe "algorithm"
+
+# Algorithm:
+# 1 -> Minimax
+# 2 -> Alpha-beta pruning
 
 ```
