@@ -1,4 +1,5 @@
 import tictactoe.Node
+import util.control.Breaks
 import scala.io.StdIn
 import scala.util.Sorting.quickSort
 
@@ -7,6 +8,10 @@ object Tictactoe {
   val O: Int = 102
   val EMPTY: Int = 103
   val DRAW: Int = 104
+  val INIT_VALUE: Int = 666
+
+  val breaks = new Breaks
+  import breaks.{break, breakable}
 
   def showItem(item: Int): String = {
     item match {
@@ -98,9 +103,9 @@ object Tictactoe {
 
   def generateTree(board: Array[Array[Int]], player: Int): Node = {
     if(verifyWin(board) == EMPTY) {
-      return new Node(board, Int.MaxValue, _generateTree(board, turnplayer(player)))
+      new Node(board, INIT_VALUE, _generateTree(board, turnplayer(player)))
     } else {
-      return new Node(board, setScore(board), null)
+      new Node(board, setScore(board), null)
     }
   }
 
@@ -108,12 +113,17 @@ object Tictactoe {
     return generateBoards(board, player).map((b) => generateTree(b, player))
   }
 
-  def scorify(root: Node, player: Int): Array[Node] = {
+  def scorify(root: Node, player: Int, isAlphaBeta: Boolean): Array[Node] = {
+    var nodes = 0
+
     root.childs.foreach((item) => {
       if(item.childs != null) {
         item.childs.foreach((child) => {
-          var value = _scorify(child, turnplayer(player))
-          if(item.weight == Int.MaxValue) item.weight = value
+          nodes += 1
+          var value = 
+            if(isAlphaBeta) _scorify_ab(child, turnplayer(player), Int.MinValue, Int.MaxValue) 
+            else _scorify(child, turnplayer(player))
+          if(item.weight == INIT_VALUE) item.weight = value
           else {
               item.weight = max(item.weight, value)
           }
@@ -123,21 +133,71 @@ object Tictactoe {
 
     def _scorify(node: Node, player: Int): Int = {
       if(node.childs != null) {
-        node.childs.foreach((child) => {
-          var value = _scorify(child, turnplayer(player))
-          if(node.weight == Int.MaxValue) node.weight = value
-          else {
-            if(player == X) {
-              node.weight = max(node.weight, value)
-            } else {
-              node.weight = min(node.weight, value)
-            }
-          }
-        })
+        if(player == X) {
+          node.childs.foreach((child) => {
+            nodes += 1
+            var value = _scorify(child, turnplayer(player))
+            if(node.weight == INIT_VALUE) node.weight = value
+            else node.weight = max(node.weight, value)
+          })
+        } else {
+          node.childs.foreach((child) => {
+            nodes += 1
+            var value = _scorify(child, turnplayer(player))
+            if(node.weight == INIT_VALUE) node.weight = value
+            else node.weight = min(node.weight, value)
+          })
+        }
       }
+
       return node.weight
     }
 
+    def _scorify_ab(node: Node, player: Int, alpha: Int, beta: Int): Int = {
+      var alpha_ = alpha
+      var beta_ = beta
+      if(node.childs != null) {
+        if(player == X) {
+          breakable {
+            node.childs.foreach((child) => {
+              nodes += 1
+              var value = _scorify_ab(child, turnplayer(player), alpha_, beta_)
+              if(node.weight == INIT_VALUE) { 
+                alpha_ = value
+                node.weight = value
+              } else {
+                node.weight = max(node.weight, value)
+                alpha_ = max(alpha, node.weight)
+              } 
+              if(beta_ <= alpha_) {
+                node.weight
+              }
+            })
+          }
+        } else {
+          breakable {
+            node.childs.foreach((child) => {
+              nodes += 1
+              var value = _scorify_ab(child, turnplayer(player), alpha_, beta_)
+              if(node.weight == INIT_VALUE) {
+                beta_ = value
+                node.weight = value
+              } else {
+                node.weight = min(node.weight, value)
+                beta_ = min(beta_, node.weight)
+              }
+              if(beta_ <= alpha_) {
+                break
+              }
+            })
+          }
+        }
+      }
+
+      return node.weight
+    }
+
+    println(s"Nós percorridos: ${nodes}")
     return root.childs
   }
 
@@ -175,14 +235,9 @@ object Tictactoe {
     return board
   }
 
-  def minimax(board: Array[Array[Int]]): Array[Array[Int]] = {
+  def minimax(board: Array[Array[Int]], isAlphaBeta: Boolean): Array[Array[Int]] = {
     var root: Node = generateTree(board, X)
-    var nextLevel: Array[Node] = scorify(root, X)
-
-    // nextLevel.foreach((b) => {
-    //   printBoard(b.board)
-    //   println(b.weight)
-    // })
+    var nextLevel: Array[Node] = scorify(root, X, isAlphaBeta)
 
     nextLevel.foreach((b) => {
       if(willWin(b)) return b.board
@@ -194,7 +249,7 @@ object Tictactoe {
     return getBestBoard(nextLevel)
   }
 
-  def play_minimax = {
+  def play(isAlphaBeta: Boolean) = {
     var board: Array[Array[Int]] = Array(Array(EMPTY, EMPTY, EMPTY), Array(EMPTY, EMPTY, EMPTY), Array(EMPTY, EMPTY, EMPTY))
     var player = X
     var win = EMPTY
@@ -203,7 +258,7 @@ object Tictactoe {
       if(player == X) {
         movement(player, board)
       } else {
-        board = minimax(board)
+        board = minimax(board, isAlphaBeta)
       }
       win = verifyWin(board)
       player = turnplayer(player)
@@ -216,15 +271,15 @@ object Tictactoe {
     }
   }
 
-  def play_alphabeta = {
-    // TODO
-  }
-
   def main(args: Array[String]) = {
-    Integer.parseInt(args(0)) match {
-      case 1 => play_minimax
-      case 2 => play_alphabeta
-      case _ => println("Wrong!")
+    if(args.length != 1) {
+      println(s"pls read the readme")
+    } else {
+      Integer.parseInt(args(0)) match {
+        case 1 => play(false)
+        case 2 => play(true)
+        case _ => println("Wrong!")
+      }
     }
   }
 }
