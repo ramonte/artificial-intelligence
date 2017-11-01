@@ -117,11 +117,12 @@ object Tictactoe {
     var nodes = 0
 
     root.childs.foreach((item) => {
+      nodes += 1
       if(item.childs != null) {
         item.childs.foreach((child) => {
           nodes += 1
-          var value = 
-            if(isAlphaBeta) _scorify_ab(child, turnplayer(player), Int.MinValue, Int.MaxValue) 
+          var value =
+            if(isAlphaBeta) _scorify_ab(child, turnplayer(player), Int.MinValue, Int.MaxValue)
             else _scorify(child, turnplayer(player))
           if(item.weight == INIT_VALUE) item.weight = value
           else {
@@ -158,39 +159,35 @@ object Tictactoe {
       var beta_ = beta
       if(node.childs != null) {
         if(player == X) {
-          breakable {
-            node.childs.foreach((child) => {
-              nodes += 1
-              var value = _scorify_ab(child, turnplayer(player), alpha_, beta_)
-              if(node.weight == INIT_VALUE) { 
-                alpha_ = value
-                node.weight = value
-              } else {
-                node.weight = max(node.weight, value)
-                alpha_ = max(alpha, node.weight)
-              } 
-              if(beta_ <= alpha_) {
-                node.weight
-              }
-            })
-          }
+          node.childs.foreach((child) => {
+            nodes += 1
+            var value = _scorify_ab(child, turnplayer(player), alpha_, beta_)
+            if(node.weight == INIT_VALUE) {
+              alpha_ = value
+              node.weight = value
+            } else {
+              node.weight = max(node.weight, value)
+              alpha_ = max(alpha_, value)
+            }
+            if(beta_ <= alpha_) {
+              return node.weight
+            }
+          })
         } else {
-          breakable {
-            node.childs.foreach((child) => {
-              nodes += 1
-              var value = _scorify_ab(child, turnplayer(player), alpha_, beta_)
-              if(node.weight == INIT_VALUE) {
-                beta_ = value
-                node.weight = value
-              } else {
-                node.weight = min(node.weight, value)
-                beta_ = min(beta_, node.weight)
-              }
-              if(beta_ <= alpha_) {
-                break
-              }
-            })
-          }
+          node.childs.foreach((child) => {
+            nodes += 1
+            var value = _scorify_ab(child, turnplayer(player), alpha_, beta_)
+            if(node.weight == INIT_VALUE) {
+              beta_ = value
+              node.weight = value
+            } else {
+              node.weight = min(node.weight, value)
+              beta_ = min(beta_, value)
+            }
+            if(beta_ <= alpha_) {
+              return node.weight
+            }
+          })
         }
       }
 
@@ -237,7 +234,11 @@ object Tictactoe {
 
   def minimax(board: Array[Array[Int]], isAlphaBeta: Boolean): Array[Array[Int]] = {
     var root: Node = generateTree(board, X)
+    val t0 = System.nanoTime()
     var nextLevel: Array[Node] = scorify(root, X, isAlphaBeta)
+    val tf = System.nanoTime()
+
+    printf(s"Tempo de execução: ${(tf-t0)/1e9d}ms")
 
     nextLevel.foreach((b) => {
       if(willWin(b)) return b.board
